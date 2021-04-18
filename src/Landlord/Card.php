@@ -154,9 +154,9 @@ class Card
     const planePair     = 13;
     const kingBomb      = 14;
 
-    public function __construct(?array $config)
+    public function __construct(array $config = [])
     {
-        $this->config = $config;
+        if (!empty($config)) $this->config = $config;
     }
 
     /**
