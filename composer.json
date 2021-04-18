@@ -1,0 +1,21 @@
+{
+    "name": "willow/landlord",
+    "description": "landlord check card type",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=7.0"
+    },
+    "authors": [
+        {
+            "name": "Liu",
+            "email": "719896508@qq.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Willow\\Landlord\\": "src/Landlord"
+        }
+    }
+}
