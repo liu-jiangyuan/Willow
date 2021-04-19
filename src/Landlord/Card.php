@@ -225,9 +225,8 @@ class Card
         foreach ($cards as $card){
             $substr[] = substr($card,1);
         }
-        $cardTimes = array_values(array_count_values($substr));
+        $cardTimes = array_count_values($substr);
         if (count($cardTimes) != 2) return ['check'=>false,'data'=>[]];
-
         $value = 0;
         foreach ($cardTimes as $k => $v){
             if ($v != 3) continue;
@@ -235,7 +234,7 @@ class Card
             break;
         }
         return [
-            'check'=> $cardTimes == [1,3] || $cardTimes == [3,1],
+            'check'=> array_values($cardTimes) == [1,3] || array_values($cardTimes) == [3,1],
             'data'=>[
                 'type' => self::threeSingle,
                 'length' => count($cards),
@@ -723,5 +722,291 @@ class Card
         if ($thisCard['length'] != $lastCard['length']) return false;
         if ($thisCard['value'] <= $lastCard['value']) return false;
         return true;
+    }
+
+    /**
+     * 提示出牌 单牌
+     * @param array $cards 手牌 ['C6','S8']......
+     * @param array $lastCardType 上一手牌信息 [type,length,value]
+     * @return array
+     */
+    public function tipSingle(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+        if ($lastCardType['type'] != self::single) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+            if ($cardValue <= $lastCardType['value']) continue;
+            $res[] = [$card];
+        }
+        //炸弹
+        foreach ($cardValueTime as $value => $card){
+            if (count($card) >= 4){
+                $res[] = $card;
+            }
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+        return $res;
+    }
+
+    /**
+     * 提示出牌 对子
+     * @param array $cards
+     * @param array $lastCardType 上一手牌信息 [type,length,value]
+     * @return array
+     */
+    public function tipPair(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+        if ($lastCardType['type'] != self::pair) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+        }
+
+        foreach ($cardValueTime as $value => $card){
+            $countCard = count($card);
+            if ($countCard < 2) continue;
+            //对子 炸弹
+            if (($countCard == 2 && $value > $lastCardType['value']) || $countCard == 4) $res[] = $card;
+            //三张
+            if ($countCard > 2 && $value > $lastCardType['value']) {
+                for ($i = 0; $i < $countCard - 1;$i ++){
+                    $res[] = array_slice($card,$i,2);
+                }
+            }
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+        return $res;
+    }
+
+    /**
+     * 提示出牌 三张
+     * @param array $cards
+     * @param array $lastCardType 上一手牌信息 [type,length,value]
+     * @return array
+     */
+    public function tipThree(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+        if ($lastCardType['type'] != self::three) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+        }
+
+        foreach ($cardValueTime as $value => $card){
+            $countCard = count($card);
+            if ($countCard < 3) continue;
+            //三张 炸弹
+            if (($countCard == 3 && $value > $lastCardType['value']) || $countCard == 4) $res[] = $card;
+            //三张
+            if ($countCard > 3 && $value > $lastCardType['value']) {
+                for ($i = 0; $i < $countCard - 2;$i ++){
+                    $res[] = array_slice($card,$i,3);
+                }
+            }
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+        return $res;
+    }
+
+    /**
+     * 提示出牌 三带一
+     * @param array $cards
+     * @param array $lastCardType
+     * @return array
+     */
+    public function tipThreeSingle(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+        if ($lastCardType['type'] != self::threeSingle) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+        }
+
+        foreach ($cardValueTime as $value => $card){
+            $countCard = count($card);
+            if ($countCard < 3) continue;
+            //炸弹
+            if ($countCard == 4) $res[] = $card;
+            //三张
+            if ($countCard >= 3 && $value > $lastCardType['value']) {
+                for ($i = 0; $i < $countCard - 2;$i ++){
+                    foreach ($cards as $single){
+                        if ($this->config['value'][substr($single,1)] != $value){
+                            $res[] = array_merge(array_slice($card,$i,3),[$single]);
+                        }
+                    }
+                }
+            }
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+        return $res;
+    }
+
+    /**
+     * 提示出牌 三带二
+     * @param array $cards
+     * @param array $lastCardType
+     * @return array
+     */
+    public function tipThreePair(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+        if ($lastCardType['type'] != self::threePair) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+        }
+
+        $pairs = [];
+        foreach ($cardValueTime as $value => $card){
+            if (count($card) < 2) continue;
+            for ($i = 0; $i <= count($card) - 2;$i ++){
+                $pairs[] = array_slice($card,$i,2);
+            }
+        }
+
+        foreach ($cardValueTime as $value => $card){
+            $countCard = count($card);
+            if ($countCard < 3) continue;
+            //炸弹
+            if ($countCard == 4) $res[] = $card;
+            //三张
+            if ($countCard >= 3 && $value > $lastCardType['value']) {
+                for ($i = 0; $i < $countCard - 2;$i ++){
+                    foreach ($pairs as $pair){
+                        if ($this->config['value'][substr($pair[0],1)] != $value){
+                            $res[] = array_merge(array_slice($card,$i,3),$pair);
+                        }
+                    }
+                }
+            }
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+        return $res;
+    }
+
+    /**
+     * 提示出牌 炸弹
+     * @param array $cards
+     * @param array $lastCardType
+     * @return array
+     */
+    public function tipBomb(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+        if ($lastCardType['type'] != self::bomb) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+        }
+
+        foreach ($cardValueTime as $value => $card){
+            $countCard = count($card);
+            if ($countCard < 4) continue;
+            //炸弹
+            if ($countCard == 4 && $value > $lastCardType['value']) $res[] = $card;
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+        return $res;
+    }
+
+    /**
+     * 提示出牌 四带两个单
+     * @param array $cards
+     * @param array $lastCardType
+     * @return array
+     */
+    public function tipBombTwoSingle(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+
+        if ($lastCardType['type'] != self::bombTwoSingle) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+        }
+
+        foreach ($cardValueTime as $value => $card){
+            $countCard = count($card);
+            if ($countCard < 4) continue;
+            //炸弹
+            if ($countCard == 4) $res[] = $card;
+            if ($countCard == 4) {
+                $twoSingle = [];
+                foreach ($cards as $single){
+                    if ($this->config['value'][substr($single,1)] == $value) continue;
+                    $twoSingle[] = $single;
+                }
+                for ($i = 0;$i < count($twoSingle) - 1;$i++){
+                    $res[] = array_merge(array_slice($twoSingle,$i,2),$card);
+                }
+            }
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+
+        return $res;
+    }
+
+    /**
+     * 提示出牌 四带两对
+     * @param array $cards
+     * @param array $lastCardType
+     * @return array
+     */
+    public function tipBombTwoPair(array $cards,array $lastCardType) :array
+    {
+        $res = [];
+
+        if ($lastCardType['type'] != self::bombTwoPair) return $res;
+        $cardValueTime = [];
+        foreach ($cards as $card){
+            $cardValue = $this->config['value'][substr($card,1)];
+            $cardValueTime[$cardValue][] = $card;
+        }
+
+        $pairs = [];
+        foreach ($cardValueTime as $value => $card){
+            if (count($card) < 2 || count($card) > 3) continue;
+            $pairs[] = array_slice($card,0,2);
+        }
+        foreach ($cardValueTime as $value => $card){
+            $countCard = count($card);
+            if ($countCard < 4) continue;
+            //炸弹
+            if ($countCard == 4) $res[] = $card;
+            if ($countCard == 4) {
+                $twoPair = [];
+                foreach ($pairs as $k => $pair){
+                    if ($this->config['value'][substr($pair[0],1)] == $value) continue;
+                    $twoPair[] = $pair;
+                }
+                for ($i = 0;$i < count($twoPair) - 1;$i++){
+                    $res[] = array_merge(array_merge($twoPair[$i],$twoPair[$i+1]),$card);
+                }
+            }
+        }
+        //王炸
+        if (isset($cardValueTime[14]) && isset($cardValueTime[15])) $res[] = array_merge($cardValueTime[14],$cardValueTime[15]);
+
+        return $res;
     }
 }
